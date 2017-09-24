@@ -5,6 +5,7 @@ sys = require "sys"
 fs = require "fs"
 yaml = require "yaml"
 dotenv = require "dotenv"
+twitter = require "twitter"
 exec = require("child_process").exec
 
 dotenv.load()
@@ -79,6 +80,40 @@ io.sockets.on "connection", (websocket) ->
       if process.env.PRINTER_ENABLED is "true"
         console.log "Printing image at ", output_file_path
         exec "lpr -o #{process.env.PRINTER_IMAGE_ORIENTATION} -o media=\"#{process.env.PRINTER_MEDIA}\" #{output_file_path}"
+
+      if process.env.TWITTER_ENABLED is "true"
+        unless process.env.TWITTER_CONSUMER_KEY
+          console.log "Please set the TWITTER_CONSUMER_KEY environment variable."
+        unless process.env.TWITTER_CONSUMER_SECRET
+          console.log "Please set the TWITTER_CONSUMER_SECRET environment variable."
+        unless process.env.TWITTER_ACCESS_TOKEN_KEY
+          console.log "Please set the TWITTER_ACCESS_TOKEN_KEY environment variable."
+        unless process.env.TWITTER_ACCESS_TOKEN_SECRET
+          console.log "Please set the TWITTER_ACCESS_TOKEN_SECRET environment variable."
+        unless process.env.TWITTER_HASHTAG
+          console.log "Please set the TWITTER_HASHTAG environment variable."
+
+        client = new twitter(
+          consumer_key: process.env.TWITTER_CONSUMER_KEY,
+          consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
+          access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY,
+          access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET
+        )
+
+        data = fs.readFileSync(output_file_path)
+
+        client.post 'media/upload', { media: data }, (error, media, response) ->
+          if !error
+            console.log media
+            status =
+              status: "I am a test ##{process.env.TWITTER_HASHTAG}"
+              media_ids: media.media_id_string
+            client.post 'statuses/update', status, (error, tweet, response) ->
+              if !error
+                console.log tweet
+              return
+          return
+
       websocket.broadcast.emit "composited_image", PhotoFileUtils.photo_path_to_url(output_file_path)
 
     compositer.on "generated_thumb", (thumb_path) ->
