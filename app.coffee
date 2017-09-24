@@ -11,6 +11,7 @@ exec = require("child_process").exec
 dotenv.load()
 console.log("printer is: #{process.env.PRINTER_ENABLED}")
 
+Quotes = require("./lib/quotes")
 PhotoFileUtils = require("./lib/photo_file_utils")
 StubCameraControl = require("./lib/stub_camera_control")
 CameraControl = require("./lib/camera_control")
@@ -105,8 +106,9 @@ io.sockets.on "connection", (websocket) ->
         client.post 'media/upload', { media: data }, (error, media, response) ->
           if !error
             console.log media
+            random_quote = Quotes[Math.floor(Math.random() * Quotes.length)]
             status =
-              status: "I am a test ##{process.env.TWITTER_HASHTAG}"
+              status: "#{random_quote} ##{process.env.TWITTER_HASHTAG}"
               media_ids: media.media_id_string
             client.post 'statuses/update', status, (error, tweet, response) ->
               if !error
