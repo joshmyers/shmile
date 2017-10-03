@@ -70,7 +70,18 @@ io.sockets.on "connection", (websocket) ->
 
   websocket.on "all_images", ->
 
-  websocket.on "composite", ->
+  websocket.on "printing_state", ->
+    console.log "printing_state"
+    if process.env.PRINTER_ENABLED is "true"
+      console.log "Telling frontend that printing is enabled"
+      websocket.emit "printing_enabled", ""
+    else
+      console.log "Telling frontend that printing is disabled"
+      websocket.emit "printing_disabled", ""
+
+  websocket.on "composite_print", ->
+    console.log("Received composite_print")
+
     compositer = new ImageCompositor(State.image_src_list).init()
     compositer.emit "composite"
     compositer.on "composited", (output_file_path) ->
@@ -115,6 +126,19 @@ io.sockets.on "connection", (websocket) ->
                 console.log tweet
               return
           return
+
+      websocket.broadcast.emit "composited_image", PhotoFileUtils.photo_path_to_url(output_file_path)
+
+    compositer.on "generated_thumb", (thumb_path) ->
+      websocket.broadcast.emit "generated_thumb", PhotoFileUtils.photo_path_to_url(thumb_path)
+      
+  websocket.on "composite", ->
+    console.log("Received composite")
+    compositer = new ImageCompositor(State.image_src_list).init()
+    compositer.emit "composite"
+    compositer.on "composited", (output_file_path) ->
+      console.log "Finished compositing image. Output image is at ", output_file_path
+      State.image_src_list = []
 
       websocket.broadcast.emit "composited_image", PhotoFileUtils.photo_path_to_url(output_file_path)
 
